@@ -3,31 +3,24 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: Request) {
   try {
-    // Frontend'den gelen veriyi alıyoruz
-    const body = await req.json();
-    const image = body.image || body.imageBase64; // Her iki isimlendirme ihtimaline karşı güvenli kontrol
-    
+    const { image } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
-      console.error("KRİTİK HATA: Vercel üzerinde GEMINI_API_KEY tanımlı değil!");
-      return NextResponse.json({ error: "Sistem ayarları eksik" }, { status: 500 });
-    }
-
-    if (!image) {
-      return NextResponse.json({ error: "Görsel verisi gönderilmedi" }, { status: 400 });
+      console.error("KRİTİK HATA: GEMINI_API_KEY tanımlı değil!");
+      return NextResponse.json({ error: "Sistem hatası: API Key eksik" }, { status: 500 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // 404 hatasını aşmak için en güncel ve stabil model:
+    // 404 hatasını önlemek için en güncel stabil model:
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    // Base64 verisinin başındaki "data:image/..." kısmını temizleyen QA onaylı temizlik:
+    // Base64 temizliği (Header varsa atar, yoksa dokunmaz)
     const base64Data = image.includes(",") ? image.split(",")[1] : image;
 
     const result = await model.generateContent([
-      "Analyze this outfit. Return ONLY a JSON object with: auraScore (number), vibeLabel (string), and roast (string). Be direct, witty and sharp. No markdown or extra text.",
+      "Analyze this outfit. Return ONLY a JSON object: {auraScore: number, vibeLabel: string, roast: string}. Be witty, sharp and direct.",
       {
         inlineData: {
           data: base64Data,
@@ -36,22 +29,20 @@ export async function POST(req: Request) {
       },
     ]);
 
-    const response = await result.response;
-    const text = response.text().trim();
+    const text = result.response.text().trim();
     
-    // Google bazen ```json ... ``` içinde dönebilir, bunu temizleyen Regex:
+    // JSON'ı temizleyen Regex (Güvenlik katmanı)
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return NextResponse.json(JSON.parse(jsonMatch[0]));
     }
     
-    console.error("HATA: Google'dan geçersiz format geldi:", text);
-    throw new Error("JSON Format Hatası");
+    throw new Error("Geçersiz format");
 
   } catch (error: any) {
     console.error("KRİTİK ANALİZ HATASI:", error.message || error);
     return NextResponse.json(
-      { error: "Analiz sırasında bir sorun oluştu." }, 
+      { error: "Analiz başarısız oldu. Lütfen tekrar deneyin." }, 
       { status: 500 }
     );
   }
