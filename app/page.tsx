@@ -122,7 +122,8 @@ export default function HomePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ imageBase64: base64 }),
+        // 'imageBase64: base64' yerine 'image: base64' yazıyoruz:
+        body: JSON.stringify({ image: base64 }), 
       });
 
       if (!res.ok) {
