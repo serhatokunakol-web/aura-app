@@ -9,17 +9,22 @@ export async function POST(req: Request) {
     if (!apiKey) return NextResponse.json({ error: "API Key bulunamadı" }, { status: 500 });
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // Tier 1 (Ücretsiz) katmanında en stabil çalışan model:
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+    // --- YENİ EKLEDİĞİN GÜVENLİ DATA KISMI BURASI ---
+    const base64Data = image.includes(",") ? image.split(",")[1] : image;
+    
     const result = await model.generateContent([
       "Analyze this outfit. Return ONLY a JSON object with: auraScore (number), vibeLabel (string), and roast (string). Do not include any markdown or extra text.",
-      { inlineData: { data: image.split(",")[1], mimeType: "image/jpeg" } }
+      { inlineData: { data: base64Data, mimeType: "image/jpeg" } }
     ]);
+    // -----------------------------------------------
 
     const response = await result.response;
     let text = response.text().trim();
     
-    // JSON dışındaki her şeyi (markdown işaretleri dahil) temizle
+    // JSON dışındaki gereksiz metinleri temizleyen Regex
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return NextResponse.json(JSON.parse(jsonMatch[0]));
