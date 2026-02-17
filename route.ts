@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     if (!apiKey) return NextResponse.json({ error: "API Key bulunamadı" }, { status: 500 });
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const result = await model.generateContent([
       "Analyze this outfit. Return ONLY a JSON object with: auraScore (number), vibeLabel (string), and roast (string). Do not include any markdown or extra text.",
